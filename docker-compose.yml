@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./server
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    profiles: ["deploy"]
+
+  frontend:
+    build: ./website
+    ports:
+      - "8080:8080"
+    profiles: ["deploy"]
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    profiles: ["deploy", "dev"]
+
+volumes:
+  redis_data:
