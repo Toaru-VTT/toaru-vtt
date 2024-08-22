@@ -38,7 +38,7 @@ $ make deploy
 
 If you're doing local development, things get a little more sophisticated:
 - For the backend you need a recent version of Go (currently 1.22)
-- For the frontend you ned a recent version of Node (currently 22.6) with Yarn installed
+- For the frontend you need a recent version of Node (currently 20.17) with Yarn installed
 - We'll still need docker to serve dependency services
 
 The main commands are still available via `make`:
