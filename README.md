@@ -1,9 +1,10 @@
 # Toaru VTT
 
-Toaru is a Virtual Tabletop specializing in card-heavy tabletop games that
-demand a flexible table layout, such as:
-[*The Quiet Year*](https://buriedwithoutceremony.com/the-quiet-year), [*i'm sorry did you say
-street magic*](https://seaexcursion.itch.io/street-magic), or [*Dialect*](https://thornygames.com/pages/dialect).
+Toaru is a Virtual Tabletop (VTT) specializing in card-heavy tabletop games that
+demand a flexible table layout, such as: [*The Quiet
+Year*](https://buriedwithoutceremony.com/the-quiet-year), [*i'm sorry did you
+say street magic*](https://seaexcursion.itch.io/street-magic), or
+[*Dialect*](https://thornygames.com/pages/dialect).
 
 ## Motivation
 
