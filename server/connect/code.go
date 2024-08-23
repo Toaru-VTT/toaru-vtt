@@ -55,3 +55,12 @@ func Normalize(code string) string {
 	}
 	return string(norm)
 }
+
+func GetCode(kv KeyVal) string {
+	code := Generate(6)
+	for length := uint(7); kv.Get(code) == nil; length++ {
+		code = Generate(length)
+	}
+	kv.Put(code, &Canvas{})
+	return code
+}
