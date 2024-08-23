@@ -19,12 +19,12 @@ type KeyVal interface {
 }
 
 type Redis struct {
-	client        *redis.Client
-	ctx           context.Context
-	retentionTime time.Duration
+	client    *redis.Client
+	ctx       context.Context
+	retention time.Duration
 }
 
-func NewRedisKeyVal(ctx context.Context) KeyVal {
+func NewRedisKeyVal(ctx context.Context, retention time.Duration) KeyVal {
 	if redisClient == nil {
 		redisHost := os.Getenv("REDIS_HOST")
 		if redisHost == "" {
@@ -36,14 +36,14 @@ func NewRedisKeyVal(ctx context.Context) KeyVal {
 	}
 
 	return &Redis{
-		client:        redisClient,
-		ctx:           ctx,
-		retentionTime: 24 * time.Hour, // TODO determine actual retention policy
+		client:    redisClient,
+		ctx:       ctx,
+		retention: retention,
 	}
 }
 
 func (r *Redis) Get(key string) *Canvas {
-	data, err := r.client.Get(r.ctx, key).Bytes()
+	data, err := r.client.Get(r.ctx, Normalize(key)).Bytes()
 	if err == redis.Nil {
 		return nil
 	} else if err != nil {
@@ -62,6 +62,6 @@ func (r *Redis) Put(key string, canvas *Canvas) error {
 		return err
 	}
 
-	err = r.client.Set(r.ctx, key, data, r.retentionTime).Err()
+	err = r.client.Set(r.ctx, key, data, r.retention).Err()
 	return err
 }

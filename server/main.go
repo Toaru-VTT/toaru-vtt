@@ -4,74 +4,79 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
+	"time"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/Swiddis/toaru-server/connect"
 )
 
 var ctx = context.Background()
+var rdb = connect.NewRedisKeyVal(ctx, 24*time.Hour)
 
-func initRedisClient() *redis.Client {
-	redisHost := os.Getenv("REDIS_HOST")
-	if redisHost == "" {
-		redisHost = "localhost"
-	}
-
-	return redis.NewClient(&redis.Options{
-		Addr: redisHost + ":6379",
-	})
-}
-
-func getCount(rdb *redis.Client, w http.ResponseWriter, _ *http.Request) {
-	countStr, err := rdb.Get(ctx, "count").Result()
-	if err == redis.Nil {
-		countStr = "0"
-	} else if err != nil {
-		http.Error(w, "Failed to get count", http.StatusInternalServerError)
-		return
-	}
-
-	count, _ := strconv.Atoi(countStr)
+// Helper to apply correct headers and send the response over the given writer
+func sendHttpJson(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Add("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(map[string]int{"count": count})
+	json.NewEncoder(w).Encode(data)
 }
 
-func incrementCount(rdb *redis.Client, w http.ResponseWriter, _ *http.Request) {
-	countStr, err := rdb.Get(ctx, "count").Result()
-	if err == redis.Nil {
-		countStr = "0"
-	} else if err != nil {
-		http.Error(w, "Failed to get count", http.StatusInternalServerError)
-		return
+func startSession() (string, *connect.Canvas) {
+	startState := &connect.Canvas{}
+	sessionCode := connect.GetCode(rdb, startState)
+	return sessionCode, startState
+}
+
+func readCanvas(reader io.Reader, length int64) (connect.Canvas, error) {
+	if length < 0 {
+		return connect.Canvas{}, fmt.Errorf("content length must be specified")
+	} else if length > 20000 {
+		return connect.Canvas{}, fmt.Errorf("content length too large")
 	}
 
-	count, _ := strconv.Atoi(countStr)
-	count++
-
-	err = rdb.Set(ctx, "count", count, 0).Err()
-	if err != nil {
-		fmt.Printf("%v\n", err)
-		http.Error(w, "Failed to update count", http.StatusInternalServerError)
-		return
+	reqState := connect.Canvas{}
+	reqBody := make([]byte, length)
+	_, err := reader.Read(reqBody)
+	if err != nil && err != io.EOF {
+		return reqState, err
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(map[string]int{"count": count})
+	err = json.Unmarshal(reqBody, &reqState)
+	return reqState, err
 }
 
 func main() {
-	rdb := initRedisClient()
-
-	http.HandleFunc("/api/get-count", func(w http.ResponseWriter, r *http.Request) {
-		getCount(rdb, w, r)
+	http.HandleFunc("POST /session", func(w http.ResponseWriter, _ *http.Request) {
+		session, state := startSession()
+		sendHttpJson(w, map[string]any{"session": session, "state": state})
 	})
-	http.HandleFunc("/api/increment-count", func(w http.ResponseWriter, r *http.Request) {
-		incrementCount(rdb, w, r)
+	http.HandleFunc("GET /session/{code}", func(w http.ResponseWriter, r *http.Request) {
+		state := rdb.Get(r.PathValue("code"))
+		if state == nil {
+			w.WriteHeader(http.StatusNotFound)
+			sendHttpJson(w, map[string]string{"error": "not found"})
+		} else {
+			sendHttpJson(w, map[string]any{"state": state})
+		}
+	})
+	http.HandleFunc("POST /session/{code}", func(w http.ResponseWriter, r *http.Request) {
+		reqState, err := readCanvas(r.Body, r.ContentLength)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("failed to parse canvas: %v\n", err)
+			sendHttpJson(w, map[string]string{"error": "unable to parse message data"})
+			return
+		}
+
+		state := rdb.Get(r.PathValue("code"))
+		if state == nil {
+			w.WriteHeader(http.StatusNotFound)
+			sendHttpJson(w, map[string]string{"error": "not found"})
+		} else {
+			newState := state.Merge(&reqState)
+			rdb.Put(r.PathValue("code"), &newState)
+			sendHttpJson(w, map[string]any{"state": newState})
+		}
 	})
 
 	fmt.Println("Server started at http://localhost:8081")

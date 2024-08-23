@@ -1,7 +1,7 @@
 package connect
 
 type Canvas struct {
-	Count int `msgpack:"count"`
+	Count int `msgpack:"count" json:"count"`
 }
 
 func (c *Canvas) Merge(other *Canvas) Canvas {

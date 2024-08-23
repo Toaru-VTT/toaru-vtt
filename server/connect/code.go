@@ -56,11 +56,11 @@ func Normalize(code string) string {
 	return string(norm)
 }
 
-func GetCode(kv KeyVal) string {
+func GetCode(kv KeyVal, state *Canvas) string {
 	code := Generate(6)
-	for length := uint(7); kv.Get(code) == nil; length++ {
+	for length := uint(7); kv.Get(code) != nil; length++ {
 		code = Generate(length)
 	}
-	kv.Put(code, &Canvas{})
+	kv.Put(code, state)
 	return code
 }
