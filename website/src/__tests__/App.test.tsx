@@ -5,7 +5,7 @@ import App from "../App";
 describe("App Component", () => {
   it("renders the app with initial count", async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ count: 0 }),
+      json: () => Promise.resolve({ state: { count: 0 } }),
     });
 
     render(<App />);
@@ -17,10 +17,10 @@ describe("App Component", () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce({
-        json: () => Promise.resolve({ count: 0 }),
+        json: () => Promise.resolve({ state: { count: 0 } }),
       })
       .mockResolvedValueOnce({
-        json: () => Promise.resolve({ count: 1 }),
+        json: () => Promise.resolve({ state: { count: 1 } }),
       });
 
     render(<App />);
