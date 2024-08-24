@@ -37,7 +37,9 @@ $ make deploy
  ✔ Container toaru-vtt-backend-1   Started
 ```
 
-If you're doing local development, things get a little more sophisticated:
+If you're doing local development, things get a little more sophisticated. If
+you have [mise-en-place](https://mise.jdx.dev/) installed, you can run `mise
+use` to get the correct dependencies, but you can manually install them too:
 - For the backend you need a recent version of Go (currently 1.22)
 - For the frontend you need a recent version of Node (currently 20.17) with Yarn installed
 - We'll still need docker to serve dependency services
