@@ -5,7 +5,12 @@ WEBSITE_DIR := ./website
 # Define commands
 .PHONY: all dev build test deploy
 
-all: build
+all: install build
+
+install:
+	@echo "Installing deps"
+	(cd $(SERVER_DIR) && go mod download) &
+	(cd $(WEBSITE_DIR) && yarn install)
 
 dev:
 	@echo "Starting development environment..."

@@ -47,6 +47,7 @@ use` to get the correct dependencies, but you can manually install them too:
 The main commands are still available via `make`:
 
 ```bash
-$ make dev # Start up a dev environment on port 8080
+$ make      # Install dependencies and make sure things can build
+$ make dev  # Start up a dev environment on port 8080
 $ make test # Run unit tests
 ```
