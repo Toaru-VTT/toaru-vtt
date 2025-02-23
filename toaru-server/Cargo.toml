@@ -4,4 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+poem = "3.1.7"
+poem-openapi = { version = "<5.1.6", features = ["swagger-ui"] }
+sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-rustls"] }
 tokio = { version = "1.42.0", features = ["full"] }
+tokio-stream = "0.1.17"

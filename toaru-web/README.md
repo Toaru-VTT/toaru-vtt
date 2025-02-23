@@ -1,38 +1,77 @@
-# sv
+# parcel-preact-typescript
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+> Minimal template using [Parcel](https://parceljs.org/), [Preact](https://preactjs.com/), and [TypeScript](https://www.typescriptlang.org/).
 
-## Creating a project
+This template provides the simplest possible set-up that combines Parcel, Preact, TypeScript, and Jest.
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Getting Started
 
-```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Install the project dependencies.
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+yarn install
 ```
 
-## Building
+## Available Scripts
 
-To create a production version of your app:
+### `yarn start`
 
-```bash
-npm run build
+Runs the app in development mode. Visit [http://localhost:1234](http://localhost:1234).
+
+### `yarn build`
+
+Builds the project for production. The build directory is `dist`; types will be written to `dist/index.d.ts`. Customize the build directory in the `outDir` configuration option in the [tsconfig.json](tsconfig.json).
+
+### `yarn test`
+
+Runs tests using [Jest](https://jestjs.io/).
+
+Configure Jest options in `package.json`.
+
+```json
+{
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "jsdom"
+  }
+}
 ```
 
-You can preview the production build with `npm run preview`.
+## Customizing `tsconfig.json`
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+The default [`tsconfig.json`](tsconfig.json) contains the following:
+
+```js
+// tsconfig.json
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "jsx": "react",
+    "jsxFactory": "h",
+    "lib": ["dom", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": true,
+    "target": "es5"
+  },
+  "include": ["src"]
+}
+```
+
+Note that `jsxFactory` must be `"h"` in order for preact to work with parcel.
+
+### Decorators
+
+Enable decorators ([stage 2](https://github.com/tc39/proposal-decorators)) by setting `compilerOptions.experimentalDecorators` to `true`:
+
+```json
+{
+  "compilerOptions": {
+    "experimentalDecorators": true
+  }
+}
+```
+
+## License
+
+[MIT](LICENSE)
