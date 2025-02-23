@@ -47,11 +47,13 @@ impl TodosApi {
         pool: Data<&DbPool>,
         description: PlainText<String>,
     ) -> Result<Json<i32>> {
-        let result: i32 = sqlx::query_scalar("INSERT INTO todos (description, done) VALUES ($1, false) RETURNING id")
-            .bind(description.0)
-            .fetch_one(pool.0)
-            .await
-            .map_err(InternalServerError)?;
+        let result: i32 = sqlx::query_scalar(
+            "INSERT INTO todos (description, done) VALUES ($1, false) RETURNING id",
+        )
+        .bind(description.0)
+        .fetch_one(pool.0)
+        .await
+        .map_err(InternalServerError)?;
         Ok(Json(result))
     }
 
