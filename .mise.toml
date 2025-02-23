@@ -1,4 +1,6 @@
+# Make sure to also update any tool versions in `.github/workflows`
+
 [tools]
 node = "20.18.1"
-rust = "1.83.0"
+rust = "stable"
 yarn = "latest"
