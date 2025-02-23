@@ -1,6 +1,6 @@
-name: React
+name: Web CI
 
-on: [push, pull_request]
+on: [pull_request, merge_group]
 
 jobs:
   lint:
