@@ -1,167 +1,108 @@
+use futures_util::{SinkExt, StreamExt};
 use poem::{
-    error::InternalServerError, listener::TcpListener, middleware::Cors, web::Data, EndpointExt,
-    Result, Route, Server,
+    get, handler,
+    listener::TcpListener,
+    web::{
+        websocket::{Message, WebSocket},
+        Data, Html, Path,
+    },
+    EndpointExt, IntoResponse, Route, Server,
 };
-use poem_openapi::{
-    param::Path,
-    payload::{Json, PlainText},
-    ApiResponse, Object, OpenApi, OpenApiService,
-};
-use sqlx::Postgres;
-use tokio_stream::StreamExt;
 
-type DbPool = sqlx::Pool<Postgres>;
+#[handler]
+fn index() -> Html<&'static str> {
+    Html(
+        r###"
+    <body>
+        <form id="loginForm">
+            Name: <input id="nameInput" type="text" />
+            <button type="submit">Login</button>
+        </form>
+        
+        <form id="sendForm" hidden>
+            Text: <input id="msgInput" type="text" />
+            <button type="submit">Send</button>
+        </form>
+        
+        <textarea id="msgsArea" cols="50" rows="30" hidden></textarea>
+    </body>
+    <script>
+        let ws;
+        const loginForm = document.querySelector("#loginForm");
+        const sendForm = document.querySelector("#sendForm");
+        const nameInput = document.querySelector("#nameInput");
+        const msgInput = document.querySelector("#msgInput");
+        const msgsArea = document.querySelector("#msgsArea");
+        
+        nameInput.focus();
 
-/// Todo
-#[derive(Object)]
-struct Todo {
-    id: i32,
-    description: String,
-    done: bool,
+        loginForm.addEventListener("submit", function(event) {
+            event.preventDefault();
+            loginForm.hidden = true;
+            sendForm.hidden = false;
+            msgsArea.hidden = false;
+            msgInput.focus();
+            ws = new WebSocket("ws://127.0.0.1:3000/ws/" + nameInput.value);
+            ws.onmessage = function(event) {
+                msgsArea.value += event.data + "\r\n";
+            }
+        });
+        
+        sendForm.addEventListener("submit", function(event) {
+            event.preventDefault();
+            ws.send(msgInput.value);
+            msgInput.value = "";
+        });
+
+    </script>
+    "###,
+    )
 }
 
-/// Todo
-#[derive(Object)]
-struct UpdateTodo {
-    description: Option<String>,
-    done: Option<bool>,
-}
+#[handler]
+fn ws(
+    Path(name): Path<String>,
+    ws: WebSocket,
+    sender: Data<&tokio::sync::broadcast::Sender<String>>,
+) -> impl IntoResponse {
+    let sender = sender.clone();
+    let mut receiver = sender.subscribe();
+    ws.on_upgrade(move |socket| async move {
+        let (mut sink, mut stream) = socket.split();
 
-#[derive(ApiResponse)]
-enum GetResponse {
-    #[oai(status = 200)]
-    Todo(Json<Todo>),
+        tokio::spawn(async move {
+            while let Some(Ok(msg)) = stream.next().await {
+                if let Message::Text(text) = msg {
+                    if sender.send(format!("{name}: {text}")).is_err() {
+                        break;
+                    }
+                }
+            }
+        });
 
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-}
-
-struct TodosApi;
-
-#[OpenApi]
-impl TodosApi {
-    /// Create an item
-    #[oai(path = "/todos", method = "post")]
-    async fn create(
-        &self,
-        pool: Data<&DbPool>,
-        description: PlainText<String>,
-    ) -> Result<Json<i32>> {
-        let result: i32 = sqlx::query_scalar(
-            "INSERT INTO todos (description, done) VALUES ($1, false) RETURNING id",
-        )
-        .bind(description.0)
-        .fetch_one(pool.0)
-        .await
-        .map_err(InternalServerError)?;
-        Ok(Json(result))
-    }
-
-    /// Find item by id
-    #[oai(path = "/todos/:id", method = "get")]
-    async fn get(&self, pool: Data<&DbPool>, id: Path<i32>) -> Result<GetResponse> {
-        let todo: Option<(i32, String, bool)> =
-            sqlx::query_as("select id, description, done from todos where id = ?")
-                .bind(id.0)
-                .fetch_optional(pool.0)
-                .await
-                .map_err(InternalServerError)?;
-
-        match todo {
-            Some(todo) => Ok(GetResponse::Todo(Json(Todo {
-                id: todo.0,
-                description: todo.1,
-                done: todo.2,
-            }))),
-            None => Ok(GetResponse::NotFound(PlainText(format!(
-                "todo `{}` not found",
-                id.0
-            )))),
-        }
-    }
-
-    /// Get all items
-    #[oai(path = "/todos", method = "get")]
-    async fn get_all(&self, pool: Data<&DbPool>) -> Result<Json<Vec<Todo>>> {
-        let mut stream =
-            sqlx::query_as::<_, (i32, String, bool)>("select id, description, done from todos")
-                .fetch(pool.0);
-
-        let mut todos = Vec::new();
-        while let Some(res) = stream.next().await {
-            let todo = res.map_err(InternalServerError)?;
-            todos.push(Todo {
-                id: todo.0,
-                description: todo.1,
-                done: todo.2,
-            });
-        }
-
-        Ok(Json(todos))
-    }
-
-    /// Delete item by id
-    #[oai(path = "/todos/:id", method = "delete")]
-    async fn delete(&self, pool: Data<&DbPool>, id: Path<i64>) -> Result<()> {
-        sqlx::query("delete from todos where id = ?")
-            .bind(id.0)
-            .execute(pool.0)
-            .await
-            .map_err(InternalServerError)?;
-        Ok(())
-    }
-
-    /// Update item by id
-    #[oai(path = "/todos/:id", method = "put")]
-    async fn update(
-        &self,
-        pool: Data<&DbPool>,
-        id: Path<i64>,
-        update: Json<UpdateTodo>,
-    ) -> Result<()> {
-        let mut sql = "update todos ".to_string();
-        if update.description.is_some() {
-            sql += "set description = ?";
-        }
-        if update.done.is_some() {
-            sql += "set done = ?";
-        }
-        sql += "where id = ?";
-
-        let mut query = sqlx::query(&sql);
-        if let Some(description) = &update.description {
-            query = query.bind(description);
-        }
-        if let Some(done) = &update.done {
-            query = query.bind(done);
-        }
-
-        query
-            .bind(id.0)
-            .execute(pool.0)
-            .await
-            .map_err(InternalServerError)?;
-        Ok(())
-    }
+        tokio::spawn(async move {
+            while let Ok(msg) = receiver.recv().await {
+                if sink.send(Message::Text(msg)).await.is_err() {
+                    break;
+                }
+            }
+        });
+    })
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = DbPool::connect("postgres://postgres:password@localhost:5432/todos").await?;
+async fn main() -> Result<(), std::io::Error> {
+    if std::env::var_os("RUST_LOG").is_none() {
+        std::env::set_var("RUST_LOG", "poem=debug");
+    }
+    tracing_subscriber::fmt::init();
 
-    let api_service =
-        OpenApiService::new(TodosApi, "Todos", "1.0.0").server("http://localhost:3000");
-    let ui = api_service.swagger_ui();
-    let spec = api_service.spec();
-    let route = Route::new()
-        .nest("/", api_service)
-        .nest("/ui", ui)
-        .at("/spec", poem::endpoint::make_sync(move |_| spec.clone()))
-        .with(Cors::new())
-        .data(pool);
+    let app = Route::new().at("/", get(index)).at(
+        "/ws/:name",
+        get(ws.data(tokio::sync::broadcast::channel::<String>(32).0)),
+    );
 
     Server::new(TcpListener::bind("0.0.0.0:3000"))
-        .run(route)
-        .await?;
-    Ok(())
+        .run(app)
+        .await
 }
