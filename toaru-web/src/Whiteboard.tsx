@@ -9,7 +9,7 @@ type Action =
   | { type: "update"; id: string; points: Point[] }
   | { type: "delete"; id: string };
 
-const reducer = (shapes: Shape[], action: Action): Shape[] => {
+export const reducer = (shapes: Shape[], action: Action): Shape[] => {
   switch (action.type) {
     case "create":
       return [...shapes, action.shape];
@@ -41,6 +41,10 @@ const handlePointerMove = (
   dispatch: React.Dispatch<Action>
 ) => {
   if (tool !== "pen") return;
+  // TODO when we get to concurrent editing, the last shape may change over the
+  // course of a draw. How can we model tracking the shape ID as part of
+  // drawing? Maybe switch from `useState<bool>` to `useState<string | null>` in
+  // Canvas?
   const lastShape = shapes[shapes.length - 1];
   if (lastShape?.type === "line") {
     dispatch({
