@@ -1,15 +1,5 @@
-import { useEffect, useRef } from "react";
-
-interface Point {
-  x: number;
-  y: number;
-}
-
-interface Shape {
-  id: string;
-  type: "line" | "rectangle" | "circle";
-  points: Point[];
-}
+import { useEffect, useRef, useState } from "react";
+import { Point, Shape } from "./geometry";
 
 const drawShape = (shape: Shape, ctx: CanvasRenderingContext2D) => {
   const points = shape.points;
@@ -21,7 +11,7 @@ const drawShape = (shape: Shape, ctx: CanvasRenderingContext2D) => {
       ctx.stroke();
       break;
     }
-    case "rectangle": {
+    case "rect": {
       ctx.beginPath();
       ctx.rect(
         points[0].x,
@@ -45,14 +35,20 @@ const drawShape = (shape: Shape, ctx: CanvasRenderingContext2D) => {
       ctx.stroke();
       break;
     }
-    default:
-      // TODO figure out proper error handling
-      alert("unhandled shape type! " + shape.type);
   }
 };
 
-const Canvas = ({ shapes }: { shapes: Shape[] }) => {
+const Canvas = ({
+  shapes,
+  onPointerDown,
+  onPointerMove,
+}: {
+  shapes: Shape[];
+  onPointerDown: (p: Point) => void;
+  onPointerMove: (p: Point) => void;
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [drawing, setDrawing] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -73,7 +69,36 @@ const Canvas = ({ shapes }: { shapes: Shape[] }) => {
     ctx.drawImage(offscreenCanvas, 0, 0);
   }, [shapes]);
 
-  return <canvas width="2000" height="2000" ref={canvasRef} />;
+  return (
+    <canvas
+      width="2000"
+      height="2000"
+      onPointerDown={(evt) => {
+        evt.stopPropagation();
+        setDrawing(true);
+        const rect = canvasRef.current!.getBoundingClientRect();
+        onPointerDown({
+          x: evt.clientX - rect.left,
+          y: evt.clientY - rect.top,
+        });
+      }}
+      onPointerMove={(evt) => {
+        evt.stopPropagation();
+        if (drawing) {
+          const rect = canvasRef.current!.getBoundingClientRect();
+          onPointerMove({
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top,
+          });
+        }
+      }}
+      onPointerUp={(evt) => {
+        evt.stopPropagation();
+        setDrawing(false);
+      }}
+      ref={canvasRef}
+    />
+  );
 };
 
 export default Canvas;
