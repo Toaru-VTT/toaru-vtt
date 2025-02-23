@@ -14,9 +14,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
-        run: |
-          cd toaru-server
-          cargo test
+        working-directory: ./toaru-server
+        run: cargo test
 
   fmt:
     name: Rustfmt
@@ -27,9 +26,8 @@ jobs:
         with:
           components: rustfmt
       - name: Enforce formatting
-        run: |
-          cd toaru-server
-          cargo fmt --check
+        working-directory: ./toaru-server
+        run: cargo fmt --check
 
   clippy:
     name: Clippy
@@ -41,6 +39,5 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Linting
-        run: |
-          cd toaru-server
-          cargo clippy -- -D warnings
+        working-directory: ./toaru-server
+        run: cargo clippy -- -D warnings

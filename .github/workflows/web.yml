@@ -1,0 +1,38 @@
+name: React
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        working-directory: ./toaru-web
+        run: yarn install --frozen-lockfile
+      - name: Run ESLint
+        working-directory: ./toaru-web
+        run: yarn run lint
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - name: Install dependencies
+        working-directory: ./toaru-web
+        run: yarn install --frozen-lockfile
+      - name: Run tests
+        working-directory: ./toaru-web
+        run: yarn test
