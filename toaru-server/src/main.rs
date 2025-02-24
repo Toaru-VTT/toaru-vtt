@@ -1,3 +1,5 @@
+mod passphrase;
+
 use futures_util::{SinkExt, StreamExt};
 use poem::{
     get, handler,
