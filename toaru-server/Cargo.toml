@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-futures-util = "0.3.31"
-poem = "3.1.7"
-poem-openapi = { version = "5.1.8", features = ["swagger-ui", "websocket"] }
+axum = { version = "0.8.1", features = ["ws"] }
+futures = "0.3.31"
 rand = "0.9.0"
+redis = "0.29.0"
 tokio = { version = "1.42.0", features = ["full"] }
-tokio-stream = "0.1.17"
-tracing-subscriber = "0.3.19"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
